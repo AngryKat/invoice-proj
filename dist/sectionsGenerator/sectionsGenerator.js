@@ -3,15 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const written_number_1 = __importDefault(require("written-number"));
 const fs_1 = __importDefault(require("fs"));
 function base64_encode(file) {
-    console.log(fs_1.default.readFileSync(file, 'base64'));
-    return fs_1.default.readFileSync(file, 'base64');
+    return fs_1.default.readFileSync(file, "base64");
 }
-function image() {
-    return { image: base64_encode('../fonts/TitkaBella.png'), width: 80, height: 80 };
-}
-exports.image = image;
+function convertAmountToWords(amount) { }
 function generateHeader(invoice) {
     const header = {
         columns: [
@@ -23,89 +20,89 @@ function generateHeader(invoice) {
                     fontSize: 16,
                 },
             },
-        ]
+        ],
     };
     return header;
 }
 exports.generateHeader = generateHeader;
-function generateMetadata(invoice) {
-    const metaData = {
-        columns: [
-            {
-                text: [
-                    {
-                        text: `Місце і Дата: `,
-                        style: {
-                            alignment: "left",
-                            bold: true,
-                        },
-                    },
-                    {
-                        text: invoice.metaData.city,
-                        style: {
-                            alignment: "left",
-                        },
-                    },
-                ],
-            },
-            {
-                text: `${invoice.metaData.date}`,
-                style: {
-                    alignment: "right",
-                },
-            },
-        ],
-    };
-    return metaData;
-}
-exports.generateMetadata = generateMetadata;
 function tableColumn(label) {
     return {
         text: label,
+        style: { alignment: "center" },
     };
-}
-function displayInfo(label, value) {
-    const info = {
-        text: [
-            {
-                text: `${label}: `,
-                style: {
-                    bold: true,
-                },
-            },
-            {
-                text: `${value}\n`,
-            },
-        ],
-    };
-    return info;
 }
 function generateSenderInformation(invoice) {
-    const senderInfo = invoice.senderInformation;
-    const senderInformation = [
-        displayInfo("Постачальник", senderInfo.fullName),
-        displayInfo("Телефон", senderInfo.phone),
-        displayInfo("Адреса", senderInfo.address),
-        displayInfo("ІПН", senderInfo.taxPayerId),
-    ];
+    const senderInformation = {
+        columns: [
+            { width: "auto", text: "Постачальник:", style: { bold: true } },
+            {
+                width: "auto",
+                stack: [
+                    {
+                        text: "Фізична особа-підприємець ЛЕСЬКІВ ОЛЕКСАНДР АНДРІЙОВИЧ",
+                        style: { bold: true },
+                    },
+                    {
+                        text: [
+                            {
+                                text: "UA36 320649 00000 26000052711276",
+                                style: { bold: true },
+                            },
+                            " в ПАТ КБ «Приватбанк»,",
+                        ],
+                    },
+                    "09100, Київська обл., м. Біла Церква, б-р Олександрійський 125/8",
+                    "Код ДРФО: 3630502976, ІПН:3630502976 тел.:+380975315564",
+                    "Платник єдиного податку третьої групи за ставкою 5%",
+                ],
+            },
+        ],
+        columnGap: 10,
+    };
     return senderInformation;
 }
 exports.generateSenderInformation = generateSenderInformation;
 function generateCustomerInformation(invoice) {
-    const customerInfo = invoice.customerInformation;
+    const { fullName, USREOU } = invoice.customerInformation;
     const customerInformation = {
-        text: [
-            displayInfo("Клієнт", customerInfo.fullName),
-            displayInfo("Адреса", customerInfo.address),
+        columns: [
+            { width: "auto", text: "Покупець:", style: { bold: true } },
+            {
+                width: "auto",
+                stack: [
+                    {
+                        text: fullName,
+                        style: { bold: true },
+                    },
+                    `ЄДРПОУ ${USREOU}`,
+                ],
+            },
         ],
+        columnGap: 35,
     };
     return customerInformation;
 }
 exports.generateCustomerInformation = generateCustomerInformation;
-function generateServiceInformation(invoice) {
-    return displayInfo("Послуга", invoice.serviceType);
+function generateAmountInwords(invoice) {
+    const amountInWords = {
+        columns: [
+            { width: "auto", text: "Сума прописом:", style: { bold: true } },
+            {
+                width: "auto",
+                stack: [
+                    {
+                        text: written_number_1.default(1234, { lang: 'uk' }),
+                        style: { bold: true },
+                    },
+                    'в т.ч. ПДВ 0,00 грн',
+                ],
+            },
+        ],
+        columnGap: 10,
+    };
+    return amountInWords;
 }
-exports.generateServiceInformation = generateServiceInformation;
+exports.generateAmountInwords = generateAmountInwords;
 function generatePaymentPeriodWarning() {
     return [
         {
@@ -122,19 +119,27 @@ exports.generatePaymentPeriodWarning = generatePaymentPeriodWarning;
 function tableBody(paymentInformation) {
     const body = [];
     body.push([
-        tableColumn("Date"),
-        tableColumn("Time"),
-        tableColumn("Type of work"),
-        tableColumn("Rate"),
-        tableColumn("Total"),
+        tableColumn("№"),
+        tableColumn("Назва"),
+        tableColumn("К-ть"),
+        tableColumn("Ціна без ПДВ"),
+        tableColumn("Сума без ПДВ"),
     ]);
-    paymentInformation.forEach((pay) => body.push([...Object.values(pay)]));
+    const tableCells = (pay) => [...Object.values(pay)].map((val) => {
+        return { text: val, style: { alignment: "center" } };
+    });
+    paymentInformation.forEach((pay, index) => body.push([
+        index + 1,
+        ...tableCells(pay),
+        { text: pay.amount * pay.price, style: { alignment: "center" } },
+    ]));
     return body;
 }
 function generateTable(invoice) {
     return {
         table: {
-            widths: ["auto", "*", "*", "*", "auto"],
+            headerRows: 1,
+            widths: ["auto", "auto", "*", "*", "*"],
             body: tableBody(invoice.paymentInformation),
         },
     };

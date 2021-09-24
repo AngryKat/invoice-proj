@@ -3,27 +3,18 @@ export type Invoice = {
       city: string,
       date: string
     },
-    senderInformation: {
-      fullName: string,
-      phone: string,
-      address: string,
-      taxPayerId: string
-    },
     customerInformation: {
       fullName: string,
-      address: string
+      USREOU: string
     },
     paymentInformation: PaymentInformation[],
     invoice_nr: number,
-    serviceType: string,
     total: number,
     senderFullName: string,
   };
 
   type PaymentInformation = {
-    date: string,
-    time: string,
-    workType: string,
-    rate: number,
-    total: number
+    name: string,
+    amount: number,
+    price: number,
   }

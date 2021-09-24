@@ -1,15 +1,14 @@
 import { Content } from "pdfmake/interfaces";
 import { Invoice } from "../dataModelsTypes/Invoice";
-import fs from 'fs';
+import writtenNumber from 'written-number';
+import fs from "fs";
 
 function base64_encode(file) {
-  console.log(fs.readFileSync(file, 'base64'))
-  return fs.readFileSync(file, 'base64');
+  return fs.readFileSync(file, "base64");
 }
 
-export function image() {
-  return { image:   base64_encode('../fonts/TitkaBella.png'), width: 80, height: 80 };
-}
+function convertAmountToWords(amount: number) {}
+
 export function generateHeader(invoice: Invoice) {
   const header: Content = {
     columns: [
@@ -21,89 +20,89 @@ export function generateHeader(invoice: Invoice) {
           fontSize: 16,
         },
       },
-
-    ]
-  };
-  return header;
-}
-
-export function generateMetadata(invoice: Invoice) {
-  const metaData: Content = {
-    columns: [
-      {
-        text: [
-          {
-            text: `Місце і Дата: `,
-            style: {
-              alignment: "left",
-              bold: true,
-            },
-          },
-          {
-            text: invoice.metaData.city,
-            style: {
-              alignment: "left",
-            },
-          },
-        ],
-      },
-      {
-        text: `${invoice.metaData.date}`,
-        style: {
-          alignment: "right",
-        },
-      },
     ],
   };
-  return metaData;
+  return header;
 }
 
 function tableColumn(label): Content {
   return {
     text: label,
+    style: { alignment: "center" },
   };
 }
 
-function displayInfo(label, value) {
-  const info: Content = {
-    text: [
+export function generateSenderInformation(invoice: Invoice) {
+  const senderInformation: Content = {
+    columns: [
+      { width: "auto", text: "Постачальник:", style: { bold: true } },
       {
-        text: `${label}: `,
-        style: {
-          bold: true,
-        },
-      },
-      {
-        text: `${value}\n`,
+        width: "auto",
+        stack: [
+          {
+            text: "Фізична особа-підприємець ЛЕСЬКІВ ОЛЕКСАНДР АНДРІЙОВИЧ",
+            style: { bold: true },
+          },
+          {
+            text: [
+              {
+                text: "UA36 320649 00000 26000052711276",
+                style: { bold: true },
+              },
+              " в ПАТ КБ «Приватбанк»,",
+            ],
+          },
+          "09100, Київська обл., м. Біла Церква, б-р Олександрійський 125/8",
+          "Код ДРФО: 3630502976, ІПН:3630502976 тел.:+380975315564",
+          "Платник єдиного податку третьої групи за ставкою 5%",
+        ],
       },
     ],
+    columnGap: 10,
   };
-  return info;
-}
-export function generateSenderInformation(invoice: Invoice) {
-  const senderInfo = invoice.senderInformation;
-  const senderInformation: Content = [
-    displayInfo("Постачальник", senderInfo.fullName),
-    displayInfo("Телефон", senderInfo.phone),
-    displayInfo("Адреса", senderInfo.address),
-    displayInfo("ІПН", senderInfo.taxPayerId),
-  ];
+
   return senderInformation;
 }
 
 export function generateCustomerInformation(invoice: Invoice) {
-  const customerInfo = invoice.customerInformation;
+  const { fullName, USREOU } = invoice.customerInformation;
   const customerInformation: Content = {
-    text: [
-      displayInfo("Клієнт", customerInfo.fullName),
-      displayInfo("Адреса", customerInfo.address),
+    columns: [
+      { width: "auto", text: "Покупець:", style: { bold: true } },
+      {
+        width: "auto",
+        stack: [
+          {
+            text: fullName,
+            style: { bold: true },
+          },
+          `ЄДРПОУ ${USREOU}`,
+        ],
+      },
     ],
+    columnGap: 35,
   };
   return customerInformation;
 }
 
-export function generateServiceInformation(invoice: Invoice): Content {
-  return displayInfo("Послуга", invoice.serviceType);
+export function generateAmountInwords(invoice: Invoice) {
+  const amountInWords: Content = {
+    columns: [
+      { width: "auto", text: "Сума прописом:", style: { bold: true } },
+      {
+        width: "auto",
+        stack: [
+          {
+            text: writtenNumber(1234, {lang: 'uk'}),
+            style: { bold: true },
+          },
+          'в т.ч. ПДВ 0,00 грн',
+        ],
+      },
+    ],
+    columnGap: 10,
+  };
+  return amountInWords;
 }
 
 export function generatePaymentPeriodWarning(): Content {
@@ -122,19 +121,32 @@ export function generatePaymentPeriodWarning(): Content {
 function tableBody(paymentInformation) {
   const body = [];
   body.push([
-    tableColumn("Date"),
-    tableColumn("Time"),
-    tableColumn("Type of work"),
-    tableColumn("Rate"),
-    tableColumn("Total"),
+    tableColumn("№"),
+    tableColumn("Назва"),
+    tableColumn("К-ть"),
+    tableColumn("Ціна без ПДВ"),
+    tableColumn("Сума без ПДВ"),
   ]);
-  paymentInformation.forEach((pay) => body.push([...Object.values(pay)]));
+
+  const tableCells = (pay) =>
+    [...Object.values(pay)].map((val) => {
+      return { text: val, style: { alignment: "center" } };
+    });
+
+  paymentInformation.forEach((pay, index) =>
+    body.push([
+      index + 1,
+      ...tableCells(pay),
+      { text: pay.amount * pay.price, style: { alignment: "center" } },
+    ])
+  );
   return body;
 }
 export function generateTable(invoice: Invoice): Content {
   return {
     table: {
-      widths: ["auto", "*", "*", "*", "auto"],
+      headerRows: 1,
+      widths: ["auto", "auto", "*", "*", "*"],
       body: tableBody(invoice.paymentInformation),
     },
   };
