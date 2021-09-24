@@ -8,7 +8,17 @@ const fs_1 = __importDefault(require("fs"));
 function base64_encode(file) {
     return fs_1.default.readFileSync(file, "base64");
 }
-function convertAmountToWords(amount) { }
+function convertAmountToWords(amount) {
+    let uahFormat = 'гривень';
+    const lastDigit = amount % 10;
+    if (lastDigit === 1) {
+        uahFormat = 'гривня';
+    }
+    if (lastDigit <= 4 && lastDigit > 1) {
+        uahFormat = 'гривні';
+    }
+    return `${written_number_1.default(amount, { lang: 'uk' })} ${uahFormat} 00 коп`;
+}
 function generateHeader(invoice) {
     const header = {
         columns: [
@@ -91,7 +101,7 @@ function generateAmountInwords(invoice) {
                 width: "auto",
                 stack: [
                     {
-                        text: written_number_1.default(1234, { lang: 'uk' }),
+                        text: convertAmountToWords(1235),
                         style: { bold: true },
                     },
                     'в т.ч. ПДВ 0,00 грн',
